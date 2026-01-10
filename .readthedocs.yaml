@@ -1,0 +1,29 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for options
+
+version: 2
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.12"
+
+# Configure Sphinx to build from Markdown files using myst-parser
+sphinx:
+  builder: html
+  configuration: docs/conf.py
+
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
+
+formats:
+  - htmlzip
+  - pdf
+
+# Versioning configuration
+# Read the Docs will automatically build versions from git tags
+# and branches. The 'latest' version tracks the default branch.

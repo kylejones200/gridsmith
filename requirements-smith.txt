@@ -1,0 +1,10 @@
+# Optional Smith library dependencies
+# GridSmith works without these, but install them for full functionality
+# Install with: pip install -r requirements-smith.txt
+
+timesmith>=0.1.0
+anomsmith>=0.1.0
+geosmith>=0.1.0
+ressmith>=0.1.0
+plotsmith>=0.1.0
+
