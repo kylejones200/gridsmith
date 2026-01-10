@@ -125,7 +125,7 @@ GridSmith attempts to use these common API patterns:
 
 ```bash
 pip install timesmith anomsmith plotsmith
-gridsmith run ami-anomaly --config configs/ch01_ami_anomaly.yaml
+gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
 ```
 
 GridSmith will automatically use Smith libraries when available.
@@ -134,7 +134,7 @@ GridSmith will automatically use Smith libraries when available.
 
 ```bash
 # Don't install Smith libraries
-gridsmith run ami-anomaly --config configs/ch01_ami_anomaly.yaml
+gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
 ```
 
 GridSmith will use fallback implementations (placeholders).

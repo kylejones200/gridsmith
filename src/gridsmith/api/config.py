@@ -13,7 +13,7 @@ from gridsmith.core import DatasetSpec, FeatureSpec, MetricSpec, SplitSpec
 
 
 class AMIAnomalyConfig(BaseModel):
-    """Configuration for AMI anomaly detection (Chapter 1)."""
+    """Configuration for AMI anomaly detection."""
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
@@ -169,7 +169,7 @@ class LoadShapeConfig(BaseModel):
 
 
 class TemperatureLoadConfig(BaseModel):
-    """Configuration for temperature-to-load modeling (Chapter 1)."""
+    """Configuration for temperature-to-load modeling."""
 
     input_path: Optional[str] = Field(None, description="Path to input data file (optional, generates synthetic if not provided)")
     output_dir: str = Field(..., description="Output directory for results")
@@ -205,7 +205,7 @@ class TemperatureLoadConfig(BaseModel):
 
 
 class LoadForecastingConfig(BaseModel):
-    """Configuration for load forecasting (Chapter 4)."""
+    """Configuration for load forecasting."""
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
@@ -253,7 +253,7 @@ class LoadForecastingConfig(BaseModel):
 
 
 class PredictiveMaintenanceConfig(BaseModel):
-    """Configuration for predictive maintenance (Chapter 5)."""
+    """Configuration for predictive maintenance."""
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
@@ -300,7 +300,7 @@ class PredictiveMaintenanceConfig(BaseModel):
 
 
 class OutagePredictionConfig(BaseModel):
-    """Configuration for outage prediction (Chapter 6)."""
+    """Configuration for outage prediction."""
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")

@@ -69,7 +69,7 @@ class Results:
 
 
 def run_ami_anomaly_pipeline(config: Config) -> Results:
-    """Run AMI anomaly detection pipeline (Chapter 1).
+    """Run AMI anomaly detection pipeline.
 
     This pipeline:
     1. Loads AMI data
@@ -133,37 +133,66 @@ def run_ami_anomaly_pipeline(config: Config) -> Results:
                         df[Columns.ANOMALY_SCORE] = anomsmith.score_samples(df[[Columns.CONSUMPTION]])
             except Exception:
                 # Fall back to simple threshold-based detection if anomsmith fails
+                pass
+        
+        # Fallback: simple threshold-based anomaly detection (if anomsmith not available or failed)
+        if Columns.IS_ANOMALY not in df.columns:
+            # Compute stats on training data only to avoid data leakage
+            # For unsupervised anomaly detection, use full dataset for fitting
+            # But for supervised evaluation, we need proper train/test split
+            if config.split_spec and "ground_truth" in df.columns:
+                # For supervised evaluation: split first, compute stats on train only
+                from sklearn.model_selection import train_test_split
+                test_size = config.split_spec.test_ratio if config.split_spec.test_ratio else 0.2
+                train_idx, test_idx = train_test_split(
+                    df.index,
+                    test_size=test_size,
+                    random_state=config.metadata.get("random_state", 42),
+                    shuffle=True
+                )
+                train_df = df.loc[train_idx]
+                test_df = df.loc[test_idx]
+                
+                # Compute stats ONLY on training data
+                mean = train_df[Columns.CONSUMPTION].mean()
+                std = train_df[Columns.CONSUMPTION].std()
+                
+                # Apply to both train and test using training statistics
+                df.loc[train_idx, Columns.ANOMALY_SCORE] = ((df.loc[train_idx, Columns.CONSUMPTION] - mean) / std).abs()
+                df.loc[test_idx, Columns.ANOMALY_SCORE] = ((df.loc[test_idx, Columns.CONSUMPTION] - mean) / std).abs()
+                df[Columns.IS_ANOMALY] = df[Columns.ANOMALY_SCORE] > 2.0
+            else:
+                # Unsupervised: use full dataset (no ground truth, no leakage concern)
                 mean = df[Columns.CONSUMPTION].mean()
                 std = df[Columns.CONSUMPTION].std()
                 df[Columns.ANOMALY_SCORE] = ((df[Columns.CONSUMPTION] - mean) / std).abs()
                 df[Columns.IS_ANOMALY] = df[Columns.ANOMALY_SCORE] > 2.0
-        else:
-            # Fallback: simple threshold-based anomaly detection
-            mean = df[Columns.CONSUMPTION].mean()
-            std = df[Columns.CONSUMPTION].std()
-            df[Columns.ANOMALY_SCORE] = ((df[Columns.CONSUMPTION] - mean) / std).abs()
-            df[Columns.IS_ANOMALY] = df[Columns.ANOMALY_SCORE] > 2.0
 
-    # Split data if split_spec provided
+    # Split data if split_spec provided (already handled above for supervised case)
     train_df = df
     test_df = None
-    if config.split_spec:
-        # TODO: Implement proper splitting logic
+    if config.split_spec and "ground_truth" not in df.columns:
+        # TODO: Implement proper splitting logic for unsupervised cases
         # For now, use full dataset
         pass
 
-    # Compute metrics
+    # Compute metrics - only on test set if split exists to avoid data leakage
     metrics: Dict[str, float] = {}
     if config.metric_specs:
         for metric_spec in config.metric_specs:
             if metric_spec.type == "anomaly":
                 # Need ground truth labels for evaluation
-                # For now, compute metrics only if available
                 if "ground_truth" in df.columns:
+                    # If we have a test split, evaluate only on test data
+                    if test_df is not None and isinstance(test_df, pd.DataFrame):
+                        eval_df = test_df
+                    else:
+                        eval_df = df
+                    
                     anomaly_metrics = compute_anomaly_metrics(
-                        df["ground_truth"],
-                        df[Columns.IS_ANOMALY],
-                        df.get(Columns.ANOMALY_SCORE),
+                        eval_df["ground_truth"],
+                        eval_df[Columns.IS_ANOMALY],
+                        eval_df.get(Columns.ANOMALY_SCORE) if Columns.ANOMALY_SCORE in eval_df.columns else None,
                         metrics=[metric_spec.name],
                     )
                     metrics.update(anomaly_metrics)
@@ -395,7 +424,7 @@ def run_transformer_forecast_pipeline(config: Config) -> Results:
 
 
 def run_temperature_load_pipeline(config: Config) -> Results:
-    """Run temperature-to-load modeling pipeline (Chapter 1).
+    """Run temperature-to-load modeling pipeline.
 
     This pipeline demonstrates the fundamental temperature-to-load relationship
     using linear regression.
@@ -452,40 +481,61 @@ def run_temperature_load_pipeline(config: Config) -> Results:
 
     # Train model using timesmith or sklearn
     from sklearn.linear_model import LinearRegression
-    from sklearn.metrics import mean_squared_error, r2_score
+    from sklearn.model_selection import train_test_split
 
     X = df[["Temperature_C"]].values
     y = df["Load_MW"].values
 
+    # Split data to avoid data leakage - train on train, evaluate on test
+    test_size = config.metadata.get("test_size", 0.2)
+    # Split with indices preserved to map predictions back correctly
+    train_indices, test_indices = train_test_split(
+        df.index,
+        test_size=test_size,
+        random_state=config.metadata.get("random_state", 42),
+        shuffle=True
+    )
+    
+    X_train = df.loc[train_indices, ["Temperature_C"]].values
+    y_train = df.loc[train_indices, "Load_MW"].values
+    X_test = df.loc[test_indices, ["Temperature_C"]].values
+    y_test = df.loc[test_indices, "Load_MW"].values
+
     model = LinearRegression()
-    model.fit(X, y)
-    y_pred = model.predict(X)
+    model.fit(X_train, y_train)
+    
+    # Predict on both train and test for visualization, but evaluate metrics only on test
+    y_train_pred = model.predict(X_train)
+    y_test_pred = model.predict(X_test)
+    
+    # Store predictions in dataframe using original indices
+    df["predicted_load"] = 0.0  # Initialize
+    df.loc[train_indices, "predicted_load"] = y_train_pred
+    df.loc[test_indices, "predicted_load"] = y_test_pred
+    df["residual"] = df["Load_MW"] - df["predicted_load"]
 
     # Compute metrics using timesmith (preferred) or local computation
+    # ONLY on test set to avoid data leakage
     metrics: Dict[str, float] = {}
     if config.metric_specs:
         for metric_spec in config.metric_specs:
             if metric_spec.type == "regression":
                 # compute_regression_metrics will try timesmith first
                 regression_metrics = compute_regression_metrics(
-                    pd.Series(y),
-                    pd.Series(y_pred),
+                    pd.Series(y_test),
+                    pd.Series(y_test_pred),
                     metrics=[metric_spec.name] if metric_spec.name else None,
                 )
                 metrics.update(regression_metrics)
     else:
         # Default metrics (compute_regression_metrics prefers timesmith)
         regression_metrics = compute_regression_metrics(
-            pd.Series(y),
-            pd.Series(y_pred),
+            pd.Series(y_test),
+            pd.Series(y_test_pred),
             metrics=["mse", "r2", "mae"],
         )
         metrics.update(regression_metrics)
         metrics["coefficient"] = float(model.coef_[0])
-
-    # Add predictions to dataframe
-    df["predicted_load"] = y_pred
-    df["residual"] = y - y_pred
 
     # Save output tables
     tables: Dict[str, str] = {}
@@ -535,10 +585,9 @@ def run_temperature_load_pipeline(config: Config) -> Results:
 
 
 def run_load_forecasting_pipeline(config: Config) -> Results:
-    """Run load forecasting pipeline (Chapter 4).
+    """Run load forecasting pipeline.
 
     This pipeline forecasts load using ARIMA and/or LSTM models via timesmith.
-    Extracted from ML4U Chapter 4 code.
 
     Args:
         config: Pipeline configuration
@@ -549,7 +598,7 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load data or generate synthetic (from Chapter 4: generate_synthetic_load)
+        # Load data or generate synthetic
     input_path = Path(config.input_path)
     if input_path.exists() and input_path.suffix in [".csv", ".parquet"]:
         if input_path.suffix == ".csv":
@@ -557,7 +606,7 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
         elif input_path.suffix == ".parquet":
             df = load_parquet(config.input_path, timestamp_column=Columns.TIMESTAMP)
     else:
-        # Generate synthetic load data (extracted from book Chapter 4)
+        # Generate synthetic load data
         np.random.seed(config.metadata.get("random_state", 42))
         date_rng = pd.date_range(
             start=config.metadata.get("start_date", "2024-01-01"),
@@ -657,7 +706,7 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
     if not timesmith_success and Columns.FORECAST not in forecast_df.columns and load_column in forecast_df.columns:
         try:
             from statsmodels.tsa.arima.model import ARIMA
-            # Extract ARIMA forecast logic from Chapter 4
+            # Use ARIMA forecast logic
             ts = forecast_df.set_index(Columns.TIMESTAMP)[load_column]
             arima_order = tuple(config.metadata.get("arima_order", (1, 1, 1)))
             model = ARIMA(ts, order=arima_order)
@@ -679,7 +728,7 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
                 })
             ], ignore_index=True)
             
-            # FALLBACK: Try LSTM forecast (from Chapter 4 book code) only if timesmith not available
+            # FALLBACK: Try LSTM forecast only if timesmith not available
             # Note: timesmith should handle LSTM internally, but this is backup
             if not HAS_TIMESMITH or timesmith is None:
                 try:
@@ -696,7 +745,7 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
                     scaler = Scaler()
                     train_scaled = scaler.fit_transform(train)
                     
-                    # Train LSTM (from Chapter 4) - only used if timesmith not available
+                    # Train LSTM - only used if timesmith not available
                     model = RNNModel(
                         model="LSTM",
                         input_chunk_length=config.metadata.get("input_chunk_length", 24),
@@ -741,37 +790,49 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
             ], ignore_index=True)
 
     # Compute metrics using timesmith (preferred) - compute_forecast_metrics tries timesmith first
+    # CRITICAL: Only compute metrics on true future forecasts vs actuals (not training data)
     if Columns.FORECAST in forecast_df.columns:
-        # Get actuals and forecasts for metrics computation
-        if load_column in forecast_df.columns:
-            # Use historical values as actuals if we don't have future actuals
-            actuals = forecast_df[load_column][-forecast_horizon:] if len(forecast_df) > forecast_horizon else forecast_df[load_column]
-            forecasts = forecast_df[Columns.FORECAST][-forecast_horizon:] if len(forecast_df) > forecast_horizon else forecast_df[Columns.FORECAST]
+        # For forecasting, we can only evaluate if we have actual future values
+        # Separate historical data from forecast period
+        historical_len = len(df)
+        
+        if len(forecast_df) > historical_len:
+            # We have future forecasts - only evaluate on the forecast period
+            # But only if we have actuals for that period (which we typically don't for real forecasting)
+            # For synthetic data or backtesting, actuals might be available
+            forecast_period = forecast_df.iloc[historical_len:]
             
-            # Align lengths
-            min_len = min(len(actuals), len(forecasts))
-            if min_len > 0:
-                actuals = actuals[-min_len:]
-                forecasts = forecasts[-min_len:]
+            if Columns.ACTUAL in forecast_period.columns or load_column in forecast_period.columns:
+                # We have actuals for the forecast period - evaluate only on forecasts
+                actuals_col = Columns.ACTUAL if Columns.ACTUAL in forecast_period.columns else load_column
+                actuals = forecast_period[actuals_col]
+                forecasts = forecast_period[Columns.FORECAST]
                 
-                if config.metric_specs:
-                    for metric_spec in config.metric_specs:
-                        if metric_spec.type == "forecast":
-                            # compute_forecast_metrics will prefer timesmith over book code
-                            forecast_metrics = compute_forecast_metrics(
-                                actuals,
-                                forecasts,
-                                metrics=[metric_spec.name] if metric_spec.name else None,
-                            )
-                            metrics.update(forecast_metrics)
-                else:
-                    # Default forecast metrics (prefers timesmith)
-                    forecast_metrics = compute_forecast_metrics(
-                        actuals,
-                        forecasts,
-                        metrics=["mse", "mae", "rmse"],
-                    )
-                    metrics.update(forecast_metrics)
+                # Align lengths and filter out NaN
+                mask = ~(actuals.isna() | forecasts.isna())
+                actuals = actuals[mask]
+                forecasts = forecasts[mask]
+                
+                if len(actuals) > 0 and len(forecasts) > 0:
+                    if config.metric_specs:
+                        for metric_spec in config.metric_specs:
+                            if metric_spec.type == "forecast":
+                                forecast_metrics = compute_forecast_metrics(
+                                    actuals,
+                                    forecasts,
+                                    metrics=[metric_spec.name] if metric_spec.name else None,
+                                )
+                                metrics.update(forecast_metrics)
+                    else:
+                        # Default forecast metrics
+                        forecast_metrics = compute_forecast_metrics(
+                            actuals,
+                            forecasts,
+                            metrics=["mse", "mae", "rmse"],
+                        )
+                        metrics.update(forecast_metrics)
+            # Note: If no actuals available for forecast period, we cannot compute metrics
+            # This is expected for real forecasting scenarios
 
     # Save output tables
     tables: Dict[str, str] = {}
@@ -808,10 +869,9 @@ def run_load_forecasting_pipeline(config: Config) -> Results:
 
 
 def run_predictive_maintenance_pipeline(config: Config) -> Results:
-    """Run predictive maintenance pipeline (Chapter 5).
+    """Run predictive maintenance pipeline.
 
     This pipeline detects anomalies and predicts failures using anomsmith.
-    Extracted from ML4U Chapter 5 code.
 
     Args:
         config: Pipeline configuration
@@ -830,7 +890,7 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
         elif input_path.suffix == ".parquet":
             df = load_parquet(config.input_path)
     else:
-        # Generate synthetic SCADA data (extracted from Chapter 5: generate_synthetic_scada_data)
+        # Generate synthetic SCADA data
         np.random.seed(config.metadata.get("random_state", 42))
         samples = config.metadata.get("samples", 1000)
         
@@ -855,7 +915,7 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
             samples
         )
         
-        # Failure probability model (from Chapter 5)
+        # Failure probability model
         failure_prob = 1 / (1 + np.exp(-(0.05*(temp-65) + 8*(vibration-0.25))))
         failures = np.random.binomial(1, failure_prob)
         
@@ -880,7 +940,7 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
     if not feature_cols:
         raise ValueError("No feature columns found. Expected: Temperature_C, Vibration_g, OilPressure_psi, Load_kVA")
 
-    # Anomaly detection using anomsmith or Chapter 5's IsolationForest
+    # Anomaly detection using anomsmith or IsolationForest
     if HAS_ANOMSMITH and anomsmith is not None:
         try:
             if hasattr(anomsmith, "detect_anomalies"):
@@ -889,35 +949,72 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
                     df[Columns.ANOMALY_SCORE] = result.get("scores", result.get("score", None))
                     df[Columns.IS_ANOMALY] = result.get("labels", result.get("anomalies", None))
         except Exception:
-            # Fall back to Chapter 5's IsolationForest
+            # Fall back to IsolationForest
             pass
 
-    # Fallback: Use Chapter 5's IsolationForest anomaly detection
+    # Fallback: Use IsolationForest anomaly detection
     if Columns.IS_ANOMALY not in df.columns:
         from sklearn.ensemble import IsolationForest
         from sklearn.preprocessing import StandardScaler
 
-        # Extract anomaly detection logic from Chapter 5
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(df[feature_cols])
+        # CRITICAL: Split data FIRST to avoid data leakage
+        # For supervised evaluation, fit scaler only on training data
+        test_size = config.metadata.get("test_size", 0.2) if "Failure" in df.columns else None
+        if test_size and "Failure" in df.columns:
+            from sklearn.model_selection import train_test_split
+            # Split indices to maintain alignment with dataframe
+            train_idx, test_idx = train_test_split(
+                df.index,
+                test_size=test_size,
+                random_state=config.metadata.get("random_state", 42),
+                stratify=df["Failure"] if df["Failure"].nunique() > 1 else None
+            )
+            X_train_anom = df.loc[train_idx, feature_cols]
+            X_test_anom = df.loc[test_idx, feature_cols]
+            
+            # Fit scaler ONLY on training data
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train_anom)
+            X_test_scaled = scaler.transform(X_test_anom)  # Transform test with train stats
+            
+            contamination = config.metadata.get("contamination", 0.05)
+            model = IsolationForest(
+                contamination=contamination,
+                random_state=config.metadata.get("random_state", 42)
+            )
+            # Fit on training data only
+            preds_train = model.fit_predict(X_train_scaled)
+            preds_test = model.predict(X_test_scaled)
+            
+            # Store predictions
+            df.loc[train_idx, Columns.IS_ANOMALY] = preds_train == -1
+            df.loc[test_idx, Columns.IS_ANOMALY] = preds_test == -1
+            
+            if hasattr(model, "score_samples"):
+                df.loc[train_idx, Columns.ANOMALY_SCORE] = -model.score_samples(X_train_scaled)
+                df.loc[test_idx, Columns.ANOMALY_SCORE] = -model.score_samples(X_test_scaled)
+        else:
+            # Unsupervised case: no ground truth, can use full dataset
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(df[feature_cols])
 
-        contamination = config.metadata.get("contamination", 0.05)
-        model = IsolationForest(
-            contamination=contamination,
-            random_state=config.metadata.get("random_state", 42)
-        )
-        preds = model.fit_predict(X_scaled)
-        df[Columns.IS_ANOMALY] = preds == -1
-        if hasattr(model, "score_samples"):
-            df[Columns.ANOMALY_SCORE] = -model.score_samples(X_scaled)
+            contamination = config.metadata.get("contamination", 0.05)
+            model = IsolationForest(
+                contamination=contamination,
+                random_state=config.metadata.get("random_state", 42)
+            )
+            preds = model.fit_predict(X_scaled)
+            df[Columns.IS_ANOMALY] = preds == -1
+            if hasattr(model, "score_samples"):
+                df[Columns.ANOMALY_SCORE] = -model.score_samples(X_scaled)
 
-    # Failure prediction using Chapter 5's RandomForest (from failure_prediction function)
+    # Failure prediction using RandomForest
     if "Failure" in df.columns:
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.model_selection import train_test_split
         from sklearn.metrics import roc_auc_score
 
-        # Extract failure prediction logic from Chapter 5
+        # Use RandomForest for failure prediction
         X = df[feature_cols]
         y = df["Failure"]
         test_size = config.metadata.get("test_size", 0.2)
@@ -939,7 +1036,7 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
         df.loc[X_test.index, "predicted_failure"] = y_pred
         df.loc[X_test.index, "failure_probability"] = y_prob
 
-        # Compute metrics (from Chapter 5)
+        # Compute metrics
         metrics: Dict[str, float] = {}
         if y_test.nunique() > 1:
             metrics["roc_auc"] = float(roc_auc_score(y_test, y_prob))
@@ -987,10 +1084,9 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
 
 
 def run_outage_prediction_pipeline(config: Config) -> Results:
-    """Run outage prediction pipeline (Chapter 6).
+    """Run outage prediction pipeline.
 
     This pipeline predicts outages using weather and asset data.
-    Extracted from ML4U Chapter 6 code.
 
     Args:
         config: Pipeline configuration
@@ -1009,7 +1105,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
         elif input_path.suffix == ".parquet":
             df = load_parquet(config.input_path)
     else:
-        # Generate synthetic storm outage data (extracted from Chapter 6: generate_storm_outage_data)
+        # Generate synthetic storm outage data
         np.random.seed(config.metadata.get("random_state", 42))
         samples = config.metadata.get("samples", 1000)
         
@@ -1034,7 +1130,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
             samples
         )
         
-        # Outage probability model (from Chapter 6)
+        # Outage probability model
         logit = (
             0.15 * (wind_speed - 25) +
             0.03 * (rainfall - 60) +
@@ -1064,7 +1160,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
     if not feature_cols:
         raise ValueError("No feature columns found. Expected: WindSpeed_mps, Rainfall_mm, TreeDensity, AssetAge_years")
 
-    # Train outage prediction model using Chapter 6's GradientBoostingClassifier
+    # Train outage prediction model using GradientBoostingClassifier
     metrics: Dict[str, float] = {}
     if "Outage" in df.columns:
         from sklearn.ensemble import GradientBoostingClassifier
@@ -1072,7 +1168,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
         from sklearn.metrics import roc_auc_score
         from sklearn.inspection import permutation_importance
 
-        # Extract train_outage_model logic from Chapter 6
+        # Use GradientBoosting for outage prediction
         X = df[feature_cols]
         y = df["Outage"]
         test_size = config.metadata.get("test_size", 0.2)
@@ -1096,7 +1192,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
         df.loc[X_test.index, "predicted_outage"] = y_pred
         df.loc[X_test.index, "outage_probability"] = y_prob
 
-        # Compute metrics (from Chapter 6)
+        # Compute metrics
         if y_test.nunique() > 1:
             metrics["roc_auc"] = float(roc_auc_score(y_test, y_prob))
             metrics.update(compute_anomaly_metrics(
@@ -1106,7 +1202,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
                 metrics=["precision", "recall", "f1"]
             ))
             
-            # Feature importance (from Chapter 6)
+            # Feature importance analysis
             result = permutation_importance(
                 model, X_test, y_test,
                 n_repeats=10,

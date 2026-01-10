@@ -1,6 +1,6 @@
-# Chapter 1: AMI Anomaly Detection
+# AMI Anomaly Detection
 
-This example demonstrates AMI (Advanced Metering Infrastructure) anomaly detection as described in ML4U Chapter 1.
+This example demonstrates AMI (Advanced Metering Infrastructure) anomaly detection.
 
 ## Overview
 
@@ -22,7 +22,7 @@ The pipeline expects a CSV or Parquet file with the following columns:
 ### Using the CLI
 
 ```bash
-gridsmith run ami-anomaly --config ../../configs/ch01_ami_anomaly.yaml
+gridsmith run ami-anomaly --config ../../configs/ami_anomaly.yaml
 ```
 
 ### Using Python
@@ -34,7 +34,7 @@ from gridsmith.api.config import AMIAnomalyConfig
 client = GridSmithClient()
 config = AMIAnomalyConfig(
     input_path="data/ami_data.csv",
-    output_dir="../../runs/ch01_ami_anomaly",
+    output_dir="../../runs/ami_anomaly",
     timestamp_column="timestamp",
     value_column="consumption",
     meter_id_column="meter_id",
@@ -53,7 +53,7 @@ python run.py
 
 ## Output Artifacts
 
-The pipeline generates the following outputs in the `runs/<timestamp>_ch01_ami_anomaly/` directory:
+The pipeline generates the following outputs in the `runs/<timestamp>_ami_anomaly/` directory:
 
 - `metrics.json`: Evaluation metrics (precision, recall, F1)
 - `tables/anomaly_results.parquet`: Full results with anomaly scores and labels
@@ -68,6 +68,6 @@ See `expected_artifacts.md` for detailed schema and metric information.
 Run the test suite to validate the example:
 
 ```bash
-pytest tests/test_ch01_ami_anomaly.py
+pytest tests/test_ami_anomaly.py
 ```
 

@@ -1,0 +1,9 @@
+input_path: examples/ami_anomaly/data/ami_data.csv
+output_dir: runs/ami_anomaly
+timestamp_column: timestamp
+value_column: consumption
+meter_id_column: meter_id
+metadata:
+  pipeline: ami_anomaly
+  description: "AMI anomaly detection example"
+

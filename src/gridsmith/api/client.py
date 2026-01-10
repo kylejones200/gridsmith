@@ -49,7 +49,7 @@ class GridSmithClient:
         pass
 
     def ami_anomaly(self, config: AMIAnomalyConfig) -> AMIAnomalyResults:
-        """Run AMI anomaly detection pipeline (Chapter 1).
+        """Run AMI anomaly detection pipeline.
 
         Args:
             config: Configuration for AMI anomaly detection
@@ -147,7 +147,7 @@ class GridSmithClient:
         )
 
     def temperature_load(self, config: TemperatureLoadConfig) -> TemperatureLoadResults:
-        """Run temperature-to-load modeling pipeline (Chapter 1).
+        """Run temperature-to-load modeling pipeline.
 
         Args:
             config: Configuration for temperature-to-load modeling
@@ -167,7 +167,7 @@ class GridSmithClient:
         )
 
     def load_forecasting(self, config: LoadForecastingConfig) -> LoadForecastingResults:
-        """Run load forecasting pipeline (Chapter 4).
+        """Run load forecasting pipeline.
 
         Args:
             config: Configuration for load forecasting
@@ -187,7 +187,7 @@ class GridSmithClient:
         )
 
     def predictive_maintenance(self, config: PredictiveMaintenanceConfig) -> PredictiveMaintenanceResults:
-        """Run predictive maintenance pipeline (Chapter 5).
+        """Run predictive maintenance pipeline.
 
         Args:
             config: Configuration for predictive maintenance
@@ -207,7 +207,7 @@ class GridSmithClient:
         )
 
     def outage_prediction(self, config: OutagePredictionConfig) -> OutagePredictionResults:
-        """Run outage prediction pipeline (Chapter 6).
+        """Run outage prediction pipeline.
 
         Args:
             config: Configuration for outage prediction

@@ -24,10 +24,10 @@ gridsmith run <pipeline-name> --config <config-file.yaml>
 ### Available Pipelines
 
 - `ami-anomaly`: AMI anomaly detection
-- `temperature-load`: Temperature-to-load modeling (Chapter 1)
-- `load-forecasting`: Load forecasting (Chapter 4)
-- `predictive-maintenance`: Predictive maintenance (Chapter 5)
-- `outage-prediction`: Outage prediction (Chapter 6)
+- `temperature-load`: Temperature-to-load modeling
+- `load-forecasting`: Load forecasting
+- `predictive-maintenance`: Predictive maintenance
+- `outage-prediction`: Outage prediction
 - `outage-detect`: Outage event detection
 - `asset-degradation`: Asset degradation analysis
 - `load-shape`: Load shape analysis
@@ -35,7 +35,7 @@ gridsmith run <pipeline-name> --config <config-file.yaml>
 ### Example
 
 ```bash
-gridsmith run ami-anomaly --config configs/ch01_ami_anomaly.yaml
+gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
 ```
 
 ### Validate Config
@@ -43,7 +43,7 @@ gridsmith run ami-anomaly --config configs/ch01_ami_anomaly.yaml
 Before running, validate your config file:
 
 ```bash
-gridsmith validate --config configs/ch01_ami_anomaly.yaml
+gridsmith validate --config configs/ami_anomaly.yaml
 ```
 
 ### Get Help
@@ -88,7 +88,7 @@ print(f"Figures: {results.figures}")
 Each example has a `run.py` script:
 
 ```bash
-cd examples/ch01_ami_anomaly
+cd examples/ami_anomaly
 python run.py
 ```
 

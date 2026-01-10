@@ -35,7 +35,7 @@ GridSmith uses canonical column names defined in `core/contracts.py`:
 - `anomaly_score`: Anomaly score (continuous)
 - `anomaly_type`: Type of anomaly
 
-## Chapter 1: AMI Anomaly Detection
+## AMI Anomaly Detection
 
 ### Required Columns
 - `timestamp`: Timestamp of measurement (datetime)
@@ -117,5 +117,5 @@ For more complex preprocessing, users should preprocess data before passing to G
 ## Examples
 
 Sample data files are provided in each chapter's example directory:
-- `examples/ch01_ami_anomaly/data/ami_data.csv`
+- `examples/ami_anomaly/data/ami_data.csv`
 

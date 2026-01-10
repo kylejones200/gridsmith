@@ -71,7 +71,7 @@ class LoadShapeResults:
 
 @dataclass
 class TemperatureLoadResults:
-    """Results from temperature-to-load modeling (Chapter 1)."""
+    """Results from temperature-to-load modeling."""
 
     metrics: Dict[str, float]
     output_dir: str
@@ -82,7 +82,7 @@ class TemperatureLoadResults:
 
 @dataclass
 class LoadForecastingResults:
-    """Results from load forecasting (Chapter 4)."""
+    """Results from load forecasting."""
 
     metrics: Dict[str, float]
     output_dir: str
@@ -93,7 +93,7 @@ class LoadForecastingResults:
 
 @dataclass
 class PredictiveMaintenanceResults:
-    """Results from predictive maintenance (Chapter 5)."""
+    """Results from predictive maintenance."""
 
     metrics: Dict[str, float]
     output_dir: str
@@ -104,7 +104,7 @@ class PredictiveMaintenanceResults:
 
 @dataclass
 class OutagePredictionResults:
-    """Results from outage prediction (Chapter 6)."""
+    """Results from outage prediction."""
 
     metrics: Dict[str, float]
     output_dir: str

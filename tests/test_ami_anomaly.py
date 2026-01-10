@@ -1,4 +1,4 @@
-"""Tests for Chapter 1: AMI Anomaly Detection pipeline.
+"""Tests for AMI Anomaly Detection pipeline.
 
 These are golden tests that compare schema and metric keys.
 """

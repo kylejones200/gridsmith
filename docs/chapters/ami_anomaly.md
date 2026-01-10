@@ -1,6 +1,6 @@
-# Chapter 1: AMI Anomaly Detection
+# AMI Anomaly Detection
 
-This chapter implements AMI (Advanced Metering Infrastructure) anomaly detection as described in ML4U Chapter 1.
+This pipeline implements AMI (Advanced Metering Infrastructure) anomaly detection.
 
 ## Overview
 
@@ -16,11 +16,11 @@ The AMI anomaly detection pipeline identifies anomalous patterns in smart meter 
 
 ## Configuration
 
-Example config (`configs/ch01_ami_anomaly.yaml`):
+Example config (`configs/ami_anomaly.yaml`):
 
 ```yaml
-input_path: examples/ch01_ami_anomaly/data/ami_data.csv
-output_dir: runs/ch01_ami_anomaly
+input_path: examples/ami_anomaly/data/ami_data.csv
+output_dir: runs/ami_anomaly
 timestamp_column: timestamp
 value_column: consumption
 meter_id_column: meter_id
@@ -50,7 +50,7 @@ Optional columns:
 ### CLI
 
 ```bash
-gridsmith run ami-anomaly --config configs/ch01_ami_anomaly.yaml
+gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
 ```
 
 ### Python
@@ -81,5 +81,5 @@ The pipeline uses `anomsmith` for anomaly detection. Current implementation uses
 
 ## Expected Results
 
-See `examples/ch01_ami_anomaly/expected_artifacts.md` for detailed schema and validation criteria.
+See `examples/ami_anomaly/expected_artifacts.md` for detailed schema and validation criteria.
 

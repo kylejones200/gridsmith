@@ -1,11 +1,11 @@
-# Expected Artifacts for Chapter 1: AMI Anomaly Detection
+# Expected Artifacts for AMI Anomaly Detection
 
 This document describes the expected output artifacts from the AMI anomaly detection pipeline.
 
 ## Output Directory Structure
 
 ```
-runs/<timestamp>_ch01_ami_anomaly/
+runs/<timestamp>_ami_anomaly/
 ├── metrics.json
 ├── tables/
 │   └── anomaly_results.parquet
