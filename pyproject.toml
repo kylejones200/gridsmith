@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gridsmith"
-version = "0.1.0"
+version = "0.1.1"
 description = "Orchestration and reference app layer for ML4U chapter examples"
 readme = "README.md"
 requires-python = ">=3.9"
