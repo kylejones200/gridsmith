@@ -35,7 +35,7 @@ master_doc = "index"
 # Set source directory for Sphinx
 html_context = {
     "display_github": True,
-    "github_user": "your-org",  # Update with actual GitHub org/user
+    "github_user": "kylejones200",
     "github_repo": "gridsmith",
     "github_version": "main",
     "conf_py_path": "/docs/",

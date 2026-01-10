@@ -1,95 +1,101 @@
-# GridSmith Documentation
+GridSmith
+=========
 
-GridSmith is an orchestration and reference app layer for machine learning in utilities. It provides a clean interface to compose algorithms from the Smith library ecosystem.
+GridSmith is a machine learning foundation for electric grid operations.
+It provides structured, reproducible pipelines for utility analytics.
+It focuses on operational use, not experimentation.
 
-## Overview
+GridSmith composes Smith libraries into complete systems.
+Each system solves a common grid problem end to end.
+GridSmith emphasizes contracts, repeatability, and auditability.
 
-GridSmith is organized into four layers:
+Audience
+--------
 
-1. **Core Layer**: Domain objects, configs, and pipelines that compose Smith libraries
-2. **API Layer**: Stable public interface with user-friendly entrypoints
-3. **CLI Layer**: Terminal interface for running pipelines
-4. **Examples Layer**: Runnable examples with documentation
+GridSmith serves electric utilities and grid operators.
+It supports transmission, distribution, and asset management teams.
 
-## Quick Start
+Problem Space
+-------------
 
-### Installation
+Electric grids generate high volume time series, spatial, and event data.
+Utilities face aging assets, weather driven risk, and regulatory pressure.
+One off models and dashboards fail to scale across the grid.
 
-```bash
-pip install gridsmith
-```
+GridSmith addresses this gap.
 
-### Running a Pipeline
+Capabilities
+------------
 
-Using the CLI:
+GridSmith supports key utility operations:
 
-```bash
-gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
-```
+**Anomaly Detection**
+  Identify meter malfunctions, theft, and unusual consumption patterns automatically.
 
-Using Python:
+**Asset Risk Scoring**
+  Prioritize maintenance and replacement based on quantified failure risk.
 
-```python
-from gridsmith import GridSmithClient
-from gridsmith.api.config import AMIAnomalyConfig
+**Degradation Analysis**
+  Detect equipment degradation before failures occur.
 
-client = GridSmithClient()
-config = AMIAnomalyConfig(
-    input_path="data/ami_data.csv",
-    output_dir="runs/output",
-)
+**Outage Analysis**
+  Predict storm-related outages and optimize crew allocation.
 
-results = client.ami_anomaly(config)
-```
+**Forecasting**
+  Forecast load, generation, and distributed energy resources.
 
-## Available Pipelines
+**Spatial Risk**
+  Analyze geographic patterns and optimize grid operations.
 
-GridSmith provides machine learning pipelines for utility operations. Here are the key pipelines:
+GridSmith integrates time series, networks, geometry, and optimization in a single framework.
 
-**Core Applications:**
-- **ami-anomaly**: AMI anomaly detection
-- **temperature-load**: Temperature-to-load modeling
-- **load-forecasting**: Load forecasting with ARIMA/LSTM
-- **predictive-maintenance**: Asset health monitoring
-- **outage-prediction**: Storm outage prediction
-- **grid-optimization**: Grid optimization with RL
-- **der-forecasting**: Distributed energy resource forecasting
-- **demand-response**: Customer load profiling
+Architecture
+------------
 
-**Advanced Techniques:**
-- **computer-vision**: Vegetation detection
-- **nlp**: Log classification
-- **ai-utilities**: LLM integration
-- **geospatial**: Feeder mapping, asset location
+GridSmith orchestrates TimeSmith, AnomSmith, GeoSmith, ResSmith, and PlotSmith.
+Each library owns its domain.
+GridSmith binds them into operational pipelines.
 
-**Integration & Scale:**
-- **mlops**: MLflow integration
-- **cybersecurity**: Threat detection
-- **ethics**: Fairness auditing
-- **roi-analysis**: Cost-benefit analysis
-- **realtime-analytics**: Streaming analytics
-- **compliance**: SAIDI/SAIFI reporting
-- **feature-engineering**: Temporal, geospatial features
-- **reliability**: Reliability analytics
-- **market-operations**: Price forecasting, bidding
+How GridSmith Is Used
+---------------------
 
-**Advanced Research:**
-- **causal-inference**: Causal methods
-- **multi-task-learning**: MTL models
+GridSmith runs as code.
+Teams execute pipelines from the CLI or Python.
+Outputs include metrics, tables, and figures suitable for operations and reporting.
 
-## Documentation
+GridSmith does not require a dashboard or service layer.
+It integrates with existing data platforms.
 
-- [Architecture](architecture.md) - System design and layer organization
-- [How to Run](how_to_run.md) - Detailed usage instructions
-- [Data Formats](data.md) - Input data requirements
-- [Integration](integration.md) - Smith library integration guide
-- [Examples](../examples/) - Example pipelines
+Quick Start
+-----------
 
-## Contributing
+Install GridSmith:
 
-GridSmith focuses on orchestration, not algorithms. New algorithms belong in the Smith libraries (timesmith, anomsmith, geosmith, ressmith, plotsmith).
+.. code-block:: bash
 
-## License
+   pip install gridsmith
 
-MIT License
+Run your first pipeline:
 
+.. code-block:: bash
+
+   gridsmith run ami-anomaly --config configs/ami_anomaly.yaml
+
+Results are saved to timestamped directories with metrics, tables, and figures ready for operations teams.
+
+See :doc:`how_to_run` for detailed usage instructions.
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   overview
+   use_cases
+   architecture
+   data
+   pipelines
+   how_to_run
+   integration
+   faq
