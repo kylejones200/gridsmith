@@ -736,3 +736,151 @@ def run_predictive_maintenance_pipeline(config: Config) -> Results:
             "anomaly_count": int(df[Columns.IS_ANOMALY].sum()) if Columns.IS_ANOMALY in df.columns else 0,
         },
     )
+
+
+def run_outage_prediction_pipeline(config: Config) -> Results:
+    """Run outage prediction pipeline.
+
+    This pipeline predicts outages using weather and asset data.
+
+    Args:
+        config: Pipeline configuration
+
+    Returns:
+        Results with metrics, tables, and figures
+    """
+    output_dir = Path(config.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load data or generate synthetic storm outage data
+    input_path = Path(config.input_path)
+    metadata = config.metadata or {}
+
+    df = (
+        _load_dataframe(input_path)
+        if input_path.exists() and input_path.suffix in [".csv", ".parquet"]
+        else (
+            (np.random.seed(metadata.get("random_state", 42))) and
+            (samples := metadata.get("samples", 1000)) and
+            (wind_speed := np.random.normal(
+                metadata.get("wind_mean", 15.0),
+                metadata.get("wind_std", 8.0),
+                samples
+            )) and
+            (rainfall := np.random.normal(
+                metadata.get("rainfall_mean", 50.0),
+                metadata.get("rainfall_std", 20.0),
+                samples
+            )) and
+            (tree_density := np.random.uniform(
+                metadata.get("tree_density_min", 0.0),
+                metadata.get("tree_density_max", 1.0),
+                samples
+            )) and
+            (asset_age := np.random.uniform(
+                metadata.get("asset_age_min", 0.0),
+                metadata.get("asset_age_max", 50.0),
+                samples
+            )) and
+            (logit := (
+                0.15 * (wind_speed - 25) +
+                0.03 * (rainfall - 60) +
+                2 * (tree_density - 0.5)
+            )) and
+            (outage_prob := 1 / (1 + np.exp(-logit))) and
+            (outages := np.random.binomial(1, outage_prob)) and
+            pd.DataFrame({
+                "WindSpeed_mps": wind_speed,
+                "Rainfall_mm": rainfall,
+                "TreeDensity": tree_density,
+                "AssetAge_years": asset_age,
+                "Outage": outages
+            })
+        )
+    )
+
+    config.dataset_spec and validate_schema(set(df.columns), config.dataset_spec)
+
+    feature_cols = [
+        col for col in ["WindSpeed_mps", "Rainfall_mm", "TreeDensity", "AssetAge_years"]
+        if col in df.columns
+    ]
+    feature_cols or (_ := ValueError(
+        "No feature columns found. Expected: WindSpeed_mps, Rainfall_mm, TreeDensity, AssetAge_years"
+    ))
+
+    # Train outage prediction model using vectorized operations
+    metrics: Dict[str, float] = {}
+    ("Outage" in df.columns) and (
+        (lambda df_inner=df, cols=feature_cols, meta=metadata, out_dir=output_dir: (
+            (GradientBoostingClassifier := __import__("sklearn.ensemble", fromlist=["GradientBoostingClassifier"]).GradientBoostingClassifier) and
+            (train_test_split := __import__("sklearn.model_selection", fromlist=["train_test_split"]).train_test_split) and
+            (roc_auc_score := __import__("sklearn.metrics", fromlist=["roc_auc_score"]).roc_auc_score) and
+            (permutation_importance := __import__("sklearn.inspection", fromlist=["permutation_importance"]).permutation_importance) and
+            (X := df_inner[cols]) and
+            (y := df_inner["Outage"]) and
+            (test_size := meta.get("test_size", 0.2)) and
+            (X_train, X_test, y_train, y_test := train_test_split(
+                X, y,
+                test_size=test_size,
+                random_state=meta.get("random_state", 42),
+                stratify=y if y.nunique() > 1 else None
+            )) and
+            (model := GradientBoostingClassifier(
+                n_estimators=meta.get("n_estimators", 100),
+                learning_rate=meta.get("learning_rate", 0.1),
+                max_depth=meta.get("max_depth", 3),
+                random_state=meta.get("random_state", 42)
+            )) and
+            model.fit(X_train, y_train) and
+            (y_pred := model.predict(X_test)) and
+            (y_prob := model.predict_proba(X_test)[:, 1]) and
+            (df_inner := df_inner.assign(**{
+                "predicted_outage": pd.Series(y_pred, index=X_test.index),
+                "outage_probability": pd.Series(y_prob, index=X_test.index),
+            })) and
+            (y_test.nunique() > 1) and (
+                (metrics_dict.update({"roc_auc": float(roc_auc_score(y_test, y_prob))})) and
+                metrics_dict.update(compute_anomaly_metrics(
+                    y_test,
+                    y_pred,
+                    pd.Series(y_prob),
+                    metrics=["precision", "recall", "f1"]
+                )) and
+                (result := permutation_importance(
+                    model, X_test, y_test,
+                    n_repeats=10,
+                    random_state=meta.get("random_state", 42)
+                )) and
+                (feature_importance_df := pd.DataFrame({
+                    "Feature": X.columns,
+                    "Importance": result.importances_mean
+                }).sort_values("Importance", ascending=False)) and
+                (importance_path := out_dir / "tables" / "feature_importance.parquet") and
+                save_dataframe(feature_importance_df, importance_path, format="parquet")
+            ) and
+            df_inner
+        )()) and
+        (df := _) and
+        (metrics := metrics) and
+        None
+    )
+
+    # Save output tables
+    results_table_path = output_dir / "tables" / "outage_prediction_results.parquet"
+    save_dataframe(df, results_table_path, format="parquet")
+    tables: Dict[str, str] = {"outage_prediction_results": str(results_table_path)}
+
+    # Generate plots
+    figures: Dict[str, str] = {}
+
+    # Save metrics
+    save_json(metrics, output_dir / "metrics.json")
+
+    return Results(
+        metrics=metrics,
+        output_dir=str(output_dir),
+        tables=tables,
+        figures=figures,
+        metadata={"pipeline": "outage_prediction", "input_shape": df.shape},
+    )
