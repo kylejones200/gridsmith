@@ -80,8 +80,8 @@ def plot_time_series(
                 "output_path": str(output_path) if output_path else None,
                 "data_shape": data.shape,
             }
-        except Exception:
-            pass
+        except Exception as e:
+            raise RuntimeError(f"Plotsmith plot_time_series failed: {e}") from e
 
     # Fallback: return metadata only
     result = {
@@ -197,8 +197,8 @@ def plot_forecast(
                 "output_path": output_path_str,
                 "data_shape": data.shape,
             }
-        except Exception:
-            pass
+        except Exception as e:
+            raise RuntimeError(f"Timesmith plot_forecast failed: {e}") from e
 
     # Fallback: return metadata only
     result = {

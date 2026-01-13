@@ -79,8 +79,13 @@ def compute_regression_metrics(
                 try:
                     results[metric] = float(func(actual, predicted))
                     continue
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Fallback to local computation if timesmith fails
+                    if metric in metric_computers:
+                        results[metric] = metric_computers[metric]()
+                    else:
+                        raise RuntimeError(f"Timesmith metric computation failed for {metric} and no fallback available: {e}") from e
+                    continue
         # Fallback to local computation
         if metric in metric_computers:
             results[metric] = metric_computers[metric]()
@@ -116,14 +121,21 @@ def compute_anomaly_metrics(
             getattr(getattr(anomsmith, "metrics", None), "anomaly", None),
             getattr(anomsmith, "evaluate", None),
         ]
+        errors = []
         for method in anomsmith_methods:
             if method:
                 try:
                     return method(actual_labels, predicted_labels, scores, metrics)
-                except Exception:
+                except Exception as e:
+                    errors.append(e)
                     continue
 
-    # Fallback: compute locally using sklearn
+        # Fallback: compute locally using sklearn
+        if errors:
+            error_msgs = "; ".join([str(e) for e in errors])
+            # Log that anomsmith failed but continue with fallback
+            import warnings
+            warnings.warn(f"Anomsmith metric computation failed, using fallback: {error_msgs}")
     from sklearn.metrics import (
         accuracy_score,
         f1_score,

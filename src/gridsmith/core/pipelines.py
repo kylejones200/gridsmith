@@ -6,7 +6,7 @@ Core owns orchestration logic but no model math.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -45,8 +45,8 @@ class Config:
     output_dir: str
     dataset_spec: Optional[DatasetSpec] = None
     split_spec: Optional[SplitSpec] = None
-    metric_specs: Optional[List[MetricSpec]] = None
-    metadata: Dict[str, Any] = None
+    metric_specs: Optional[list[MetricSpec]] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         self.metadata = self.metadata or {}
@@ -56,11 +56,11 @@ class Config:
 class Results:
     """Base results from pipeline execution."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = None  # table_name -> file_path
-    figures: Dict[str, str] = None  # figure_name -> file_path
-    metadata: Dict[str, Any] = None
+    tables: dict[str, str] = None  # table_name -> file_path
+    figures: dict[str, str] = None  # figure_name -> file_path
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         self.tables = self.tables or {}
@@ -70,7 +70,7 @@ class Results:
 
 # Helper functions with dictionary dispatch and vectorized operations
 
-LOADERS: Dict[str, Callable] = {
+LOADERS: dict[str, Callable] = {
     ".csv": lambda path, **kwargs: load_csv(str(path), **kwargs),
     ".parquet": lambda path, **kwargs: load_parquet(str(path), **kwargs),
 }
@@ -83,7 +83,7 @@ def _load_dataframe(input_path: Path, timestamp_column: str = Columns.TIMESTAMP)
     return loader(input_path, timestamp_column=timestamp_column)
 
 
-def _find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+def _find_column(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
     """Find column using generator expression."""
     return next((col for col in candidates if col in df.columns), None)
 
@@ -131,14 +131,18 @@ def _try_anomsmith_detection(df: pd.DataFrame, column: str) -> pd.DataFrame:
         ),
     ]
 
+    errors = []
     for strategy in strategies:
         try:
             result_df = strategy()
-            (result_df is not None and Columns.IS_ANOMALY in result_df.columns) and (lambda: None)()
-            (result_df is not None and Columns.IS_ANOMALY in result_df.columns) and (lambda: result_df)()
-            (result_df is not None and Columns.IS_ANOMALY in result_df.columns) and (lambda: None)()
-        except Exception:
+            if result_df is not None and Columns.IS_ANOMALY in result_df.columns:
+                return result_df
+        except Exception as e:
+            errors.append(e)
             continue
+    if errors:
+        error_msgs = "; ".join([str(e) for e in errors])
+        raise RuntimeError(f"All anomsmith detection strategies failed: {error_msgs}") from errors[0]
     return df
 
 
@@ -221,6 +225,7 @@ def _try_timesmith_forecast(
         )
 
     # Try strategies
+    errors = []
     for strategy in strategies:
         try:
             forecasts = strategy()
@@ -248,12 +253,14 @@ def _try_timesmith_forecast(
                 lambda: (df, False)
             )
             result_df, success = handler()
-            success and (lambda: None)()
-            success and (lambda: (result_df, True))()
-            success and (lambda: None)()
-        except Exception:
+            if success:
+                return result_df, True
+        except Exception as e:
+            errors.append(e)
             continue
-
+    if errors:
+        error_msgs = "; ".join([str(e) for e in errors])
+        raise RuntimeError(f"All timesmith forecast strategies failed: {error_msgs}") from errors[0]
     return df, False
 
 
@@ -327,9 +334,9 @@ def run_outage_event_pipeline(config: Config) -> Results:
     df = _load_dataframe(input_path, Columns.TIMESTAMP)
     config.dataset_spec and validate_schema(set(df.columns), config.dataset_spec)
 
-    metrics: Dict[str, float] = {}
-    tables: Dict[str, str] = {}
-    figures: Dict[str, str] = {}
+    metrics: dict[str, float] = {}
+    tables: dict[str, str] = {}
+    figures: dict[str, str] = {}
 
     save_json(metrics, output_dir / "metrics.json")
 
@@ -810,7 +817,7 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
     ))
 
     # Train outage prediction model using vectorized operations
-    metrics: Dict[str, float] = {}
+    metrics: dict[str, float] = {}
     ("Outage" in df.columns) and (
         (lambda df_inner=df, cols=feature_cols, meta=metadata, out_dir=output_dir: (
             (GradientBoostingClassifier := __import__("sklearn.ensemble", fromlist=["GradientBoostingClassifier"]).GradientBoostingClassifier) and
@@ -869,10 +876,10 @@ def run_outage_prediction_pipeline(config: Config) -> Results:
     # Save output tables
     results_table_path = output_dir / "tables" / "outage_prediction_results.parquet"
     save_dataframe(df, results_table_path, format="parquet")
-    tables: Dict[str, str] = {"outage_prediction_results": str(results_table_path)}
+    tables: dict[str, str] = {"outage_prediction_results": str(results_table_path)}
 
     # Generate plots
-    figures: Dict[str, str] = {}
+    figures: dict[str, str] = {}
 
     # Save metrics
     save_json(metrics, output_dir / "metrics.json")
