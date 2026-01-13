@@ -38,6 +38,7 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
+    "black>=23.0.0",
     "mypy>=1.5.0",
 ]
 docs = [
@@ -65,11 +66,14 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"src/gridsmith/api/config.py" = ["F821"]  # Forward references with quotes are valid Python
 
 [tool.mypy]
 python_version = "3.9"

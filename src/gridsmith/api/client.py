@@ -3,9 +3,6 @@
 This module provides the stable public API for GridSmith.
 """
 
-from pathlib import Path
-from typing import Optional
-
 from gridsmith.api.config import (
     AMIAnomalyConfig,
     AssetDegradationConfig,
@@ -33,7 +30,6 @@ from gridsmith.core.pipelines import (
     run_outage_prediction_pipeline,
     run_predictive_maintenance_pipeline,
     run_temperature_load_pipeline,
-    run_transformer_forecast_pipeline,
 )
 
 
@@ -88,7 +84,9 @@ class GridSmithClient:
             metadata=results.metadata,
         )
 
-    def asset_degradation(self, config: AssetDegradationConfig) -> AssetDegradationResults:
+    def asset_degradation(
+        self, config: AssetDegradationConfig
+    ) -> AssetDegradationResults:
         """Run asset degradation analysis pipeline.
 
         Args:
@@ -186,7 +184,9 @@ class GridSmithClient:
             metadata=results.metadata,
         )
 
-    def predictive_maintenance(self, config: PredictiveMaintenanceConfig) -> PredictiveMaintenanceResults:
+    def predictive_maintenance(
+        self, config: PredictiveMaintenanceConfig
+    ) -> PredictiveMaintenanceResults:
         """Run predictive maintenance pipeline.
 
         Args:
@@ -206,7 +206,9 @@ class GridSmithClient:
             metadata=results.metadata,
         )
 
-    def outage_prediction(self, config: OutagePredictionConfig) -> OutagePredictionResults:
+    def outage_prediction(
+        self, config: OutagePredictionConfig
+    ) -> OutagePredictionResults:
         """Run outage prediction pipeline.
 
         Args:
@@ -225,4 +227,3 @@ class GridSmithClient:
             figures=results.figures,
             metadata=results.metadata,
         )
-

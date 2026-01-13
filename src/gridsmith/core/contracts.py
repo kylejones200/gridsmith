@@ -5,7 +5,7 @@ Core owns data contracts and orchestration logic.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Optional
 
 
 # Canonical column names for common grid data concepts
@@ -63,13 +63,13 @@ class DatasetSpec:
     """Specification for a dataset schema and requirements."""
 
     name: str
-    required_columns: List[str]
-    optional_columns: List[str] = field(default_factory=list)
+    required_columns: list[str]
+    optional_columns: list[str] = field(default_factory=list)
     timestamp_column: Optional[str] = None
     id_column: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def validate(self, df_columns: Set[str]) -> List[str]:
+    def validate(self, df_columns: set[str]) -> list[str]:
         """Validate that a DataFrame has required columns.
 
         Args:
@@ -89,7 +89,7 @@ class FeatureSpec:
     name: str
     type: str  # 'numeric', 'categorical', 'datetime', 'geospatial', 'text'
     required: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -105,7 +105,7 @@ class SplitSpec:
     train_ratio: Optional[float] = None
     test_ratio: Optional[float] = None
     validation_ratio: Optional[float] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -114,12 +114,12 @@ class MetricSpec:
 
     name: str
     type: str  # 'regression', 'classification', 'anomaly', 'forecast'
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
     required: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def validate_schema(df_columns: Set[str], spec: DatasetSpec) -> None:
+def validate_schema(df_columns: set[str], spec: DatasetSpec) -> None:
     """Validate DataFrame schema against a DatasetSpec.
 
     Args:
@@ -134,4 +134,3 @@ def validate_schema(df_columns: Set[str], spec: DatasetSpec) -> None:
         raise ValueError(
             f"Missing required columns for {spec.name}: {', '.join(missing)}"
         )
-

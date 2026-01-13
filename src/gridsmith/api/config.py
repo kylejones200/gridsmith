@@ -4,12 +4,14 @@ This module provides user-friendly configuration objects that map to core contra
 Uses pydantic for validation.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from gridsmith.core import DatasetSpec, FeatureSpec, MetricSpec, SplitSpec
+from gridsmith.core import DatasetSpec, MetricSpec
 
 
 class AMIAnomalyConfig(BaseModel):
@@ -17,10 +19,18 @@ class AMIAnomalyConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="timestamp", description="Name of timestamp column")
-    value_column: str = Field(default="consumption", description="Name of value column to analyze")
-    meter_id_column: Optional[str] = Field(default="meter_id", description="Name of meter ID column")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    timestamp_column: str = Field(
+        default="timestamp", description="Name of timestamp column"
+    )
+    value_column: str = Field(
+        default="consumption", description="Name of value column to analyze"
+    )
+    meter_id_column: Optional[str] = Field(
+        default="meter_id", description="Name of meter ID column"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -31,7 +41,7 @@ class AMIAnomalyConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -65,8 +75,12 @@ class OutageDetectionConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="timestamp", description="Name of timestamp column")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    timestamp_column: str = Field(
+        default="timestamp", description="Name of timestamp column"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -77,7 +91,7 @@ class OutageDetectionConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -100,9 +114,15 @@ class AssetDegradationConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="timestamp", description="Name of timestamp column")
-    asset_id_column: str = Field(default="asset_id", description="Name of asset ID column")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    timestamp_column: str = Field(
+        default="timestamp", description="Name of timestamp column"
+    )
+    asset_id_column: str = Field(
+        default="asset_id", description="Name of asset ID column"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -113,7 +133,7 @@ class AssetDegradationConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -137,9 +157,15 @@ class LoadShapeConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="timestamp", description="Name of timestamp column")
-    consumption_column: str = Field(default="consumption", description="Name of consumption column")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    timestamp_column: str = Field(
+        default="timestamp", description="Name of timestamp column"
+    )
+    consumption_column: str = Field(
+        default="consumption", description="Name of consumption column"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -150,7 +176,7 @@ class LoadShapeConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -171,14 +197,24 @@ class LoadShapeConfig(BaseModel):
 class TemperatureLoadConfig(BaseModel):
     """Configuration for temperature-to-load modeling."""
 
-    input_path: Optional[str] = Field(None, description="Path to input data file (optional, generates synthetic if not provided)")
+    input_path: Optional[str] = Field(
+        None,
+        description="Path to input data file (optional, generates synthetic if not provided)",
+    )
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="Date", description="Name of timestamp column")
-    temperature_column: str = Field(default="Temperature_C", description="Name of temperature column")
+    timestamp_column: str = Field(
+        default="Date", description="Name of timestamp column"
+    )
+    temperature_column: str = Field(
+        default="Temperature_C", description="Name of temperature column"
+    )
     load_column: str = Field(default="Load_MW", description="Name of load column")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata (for synthetic data generation)")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata (for synthetic data generation)",
+    )
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -209,10 +245,14 @@ class LoadForecastingConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    timestamp_column: str = Field(default="timestamp", description="Name of timestamp column")
+    timestamp_column: str = Field(
+        default="timestamp", description="Name of timestamp column"
+    )
     load_column: str = Field(default="Load_MW", description="Name of load column")
     forecast_horizon: int = Field(default=24, description="Number of hours to forecast")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -224,7 +264,7 @@ class LoadForecastingConfig(BaseModel):
                 raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
@@ -257,9 +297,15 @@ class PredictiveMaintenanceConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    feature_columns: Optional[List[str]] = Field(None, description="Feature columns (auto-detected if not provided)")
-    contamination: float = Field(default=0.05, description="Expected contamination rate for anomaly detection")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    feature_columns: Optional[list[str]] = Field(
+        None, description="Feature columns (auto-detected if not provided)"
+    )
+    contamination: float = Field(
+        default=0.05, description="Expected contamination rate for anomaly detection"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -270,13 +316,14 @@ class PredictiveMaintenanceConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
         dataset_spec = DatasetSpec(
             name="predictive_maintenance",
-            required_columns=self.feature_columns or ["Temperature_C", "Vibration_g", "OilPressure_psi", "Load_kVA"],
+            required_columns=self.feature_columns
+            or ["Temperature_C", "Vibration_g", "OilPressure_psi", "Load_kVA"],
             optional_columns=["Failure"],
         )
 
@@ -304,8 +351,12 @@ class OutagePredictionConfig(BaseModel):
 
     input_path: str = Field(..., description="Path to input data file")
     output_dir: str = Field(..., description="Output directory for results")
-    feature_columns: Optional[List[str]] = Field(None, description="Feature columns (auto-detected if not provided)")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    feature_columns: Optional[list[str]] = Field(
+        None, description="Feature columns (auto-detected if not provided)"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("input_path")
     @classmethod
@@ -316,13 +367,14 @@ class OutagePredictionConfig(BaseModel):
             raise ValueError(f"Input path does not exist: {v}")
         return v
 
-    def to_core_config(self) -> "Config":
+    def to_core_config(self) -> Config:
         """Convert to core Config object."""
         from gridsmith.core.pipelines import Config
 
         dataset_spec = DatasetSpec(
             name="outage_prediction",
-            required_columns=self.feature_columns or ["WindSpeed_mps", "Rainfall_mm", "TreeDensity", "AssetAge_years"],
+            required_columns=self.feature_columns
+            or ["WindSpeed_mps", "Rainfall_mm", "TreeDensity", "AssetAge_years"],
             optional_columns=["Outage"],
         )
 
@@ -340,4 +392,3 @@ class OutagePredictionConfig(BaseModel):
             metric_specs=metric_specs,
             metadata=self.metadata,
         )
-

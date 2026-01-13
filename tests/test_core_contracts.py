@@ -26,12 +26,12 @@ def test_dataset_spec_validation():
         required_columns=["col1", "col2"],
         optional_columns=["col3"],
     )
-    
+
     # Valid schema
     df_columns = {"col1", "col2", "col3", "col4"}
     missing = spec.validate(df_columns)
     assert len(missing) == 0
-    
+
     # Missing required column
     df_columns = {"col1"}
     missing = spec.validate(df_columns)
@@ -44,10 +44,10 @@ def test_validate_schema():
         name="test",
         required_columns=["col1", "col2"],
     )
-    
+
     # Valid
     validate_schema({"col1", "col2", "col3"}, spec)
-    
+
     # Invalid
     with pytest.raises(ValueError, match="Missing required columns"):
         validate_schema({"col1"}, spec)
@@ -84,4 +84,3 @@ def test_split_spec():
     )
     assert spec.train_ratio == 0.7
     assert spec.test_ratio == 0.3
-

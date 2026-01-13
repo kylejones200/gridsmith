@@ -7,7 +7,9 @@ import os
 import sys
 
 # Add src to path for autodoc
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+)
 
 # Configuration file for the Sphinx documentation builder
 project = "GridSmith"
@@ -62,4 +64,3 @@ myst_enable_extensions = [
 
 # MyST parser options
 myst_heading_anchors = 3
-

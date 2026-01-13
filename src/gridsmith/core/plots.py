@@ -1,21 +1,30 @@
-"""Thin wrappers that call plotsmith.
+"""Thin wrappers that call plotsmith and timesmith.
 
 This module provides wrappers for plotting functionality.
 Return figure objects and file paths.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 
-# Try to import plotsmith with graceful fallback
+# Try to import Smith libraries with graceful fallback
 try:
     import plotsmith
+
     HAS_PLOTSMITH = True
 except ImportError:
     HAS_PLOTSMITH = False
     plotsmith = None
+
+try:
+    import timesmith
+
+    HAS_TIMESMITH = True
+except ImportError:
+    HAS_TIMESMITH = False
+    timesmith = None
 
 
 def plot_time_series(
@@ -25,7 +34,7 @@ def plot_time_series(
     title: Optional[str] = None,
     output_path: Optional[Union[str, Path]] = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a time series plot.
 
     Delegates to plotsmith when available.
@@ -41,62 +50,51 @@ def plot_time_series(
     Returns:
         Dictionary with plot metadata and saved path if applicable
     """
-    # Try to use plotsmith if available
+    y_columns_list = [y_columns] if isinstance(y_columns, str) else y_columns
+
+    # Try plotsmith first
     if HAS_PLOTSMITH and plotsmith is not None:
         try:
-            if isinstance(y_columns, str):
-                y_columns = [y_columns]
-            
-            # Delegate to plotsmith
-            if hasattr(plotsmith, "plot_time_series"):
-                fig = plotsmith.plot_time_series(data, x_column, y_columns, title=title, **kwargs)
-            elif hasattr(plotsmith, "plot") and hasattr(plotsmith.plot, "time_series"):
-                fig = plotsmith.plot.time_series(data, x_column, y_columns, title=title, **kwargs)
-            else:
-                raise AttributeError("plotsmith does not have expected plot_time_series function")
-            
-            # Save if output_path provided
-            if output_path:
-                output_path = Path(output_path)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                if hasattr(fig, "savefig"):
-                    fig.savefig(output_path)
-                elif hasattr(fig, "save"):
-                    fig.save(output_path)
-                else:
-                    # Fallback: try matplotlib-style save
-                    import matplotlib.pyplot as plt
-                    if hasattr(plt, "savefig"):
-                        plt.savefig(output_path)
-                        plt.close()
-            
+            plot_data = data.set_index(x_column)
+            plot_data = (
+                plot_data[y_columns_list[0]]
+                if len(y_columns_list) == 1
+                else plot_data[y_columns_list]
+            )
+
+            output_path_obj = Path(output_path) if output_path else None
+            output_path_obj and output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+            plotsmith.plot_timeseries(
+                plot_data,
+                title=title,
+                save_path=str(output_path) if output_path else None,
+                **kwargs,
+            )
+
             return {
                 "type": "time_series",
                 "x_column": x_column,
-                "y_columns": y_columns,
+                "y_columns": y_columns_list,
                 "title": title,
                 "output_path": str(output_path) if output_path else None,
                 "data_shape": data.shape,
             }
         except Exception:
-            # Fall back to placeholder if plotsmith fails
             pass
 
     # Fallback: return metadata only
-    if isinstance(y_columns, str):
-        y_columns = [y_columns]
-
-    result: Dict[str, Any] = {
+    result = {
         "type": "time_series",
         "x_column": x_column,
-        "y_columns": y_columns,
+        "y_columns": y_columns_list,
         "title": title,
         "data_shape": data.shape,
     }
 
     if output_path:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path_obj = Path(output_path)
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
         result["output_path"] = str(output_path)
 
     return result
@@ -110,10 +108,10 @@ def plot_anomalies(
     title: Optional[str] = None,
     output_path: Optional[Union[str, Path]] = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create an anomaly visualization plot.
 
-    Delegates to plotsmith when available.
+    Note: plotsmith doesn't have plot_anomalies, so this returns metadata only.
 
     Args:
         data: DataFrame with time series and anomaly labels
@@ -127,51 +125,7 @@ def plot_anomalies(
     Returns:
         Dictionary with plot metadata and saved path if applicable
     """
-    # Try to use plotsmith if available
-    if HAS_PLOTSMITH and plotsmith is not None:
-        try:
-            # Delegate to plotsmith
-            if hasattr(plotsmith, "plot_anomalies"):
-                fig = plotsmith.plot_anomalies(
-                    data, timestamp_column, value_column, anomaly_column, title=title, **kwargs
-                )
-            elif hasattr(plotsmith, "plot") and hasattr(plotsmith.plot, "anomalies"):
-                fig = plotsmith.plot.anomalies(
-                    data, timestamp_column, value_column, anomaly_column, title=title, **kwargs
-                )
-            else:
-                raise AttributeError("plotsmith does not have expected plot_anomalies function")
-            
-            # Save if output_path provided
-            if output_path:
-                output_path = Path(output_path)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                if hasattr(fig, "savefig"):
-                    fig.savefig(output_path)
-                elif hasattr(fig, "save"):
-                    fig.save(output_path)
-                else:
-                    # Fallback: try matplotlib-style save
-                    import matplotlib.pyplot as plt
-                    if hasattr(plt, "savefig"):
-                        plt.savefig(output_path)
-                        plt.close()
-            
-            return {
-                "type": "anomaly",
-                "timestamp_column": timestamp_column,
-                "value_column": value_column,
-                "anomaly_column": anomaly_column,
-                "title": title,
-                "output_path": str(output_path) if output_path else None,
-                "data_shape": data.shape,
-            }
-        except Exception:
-            # Fall back to placeholder if plotsmith fails
-            pass
-
-    # Fallback: return metadata only
-    result: Dict[str, Any] = {
+    result = {
         "type": "anomaly",
         "timestamp_column": timestamp_column,
         "value_column": value_column,
@@ -181,8 +135,8 @@ def plot_anomalies(
     }
 
     if output_path:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path_obj = Path(output_path)
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
         result["output_path"] = str(output_path)
 
     return result
@@ -196,10 +150,10 @@ def plot_forecast(
     title: Optional[str] = None,
     output_path: Optional[Union[str, Path]] = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a forecast visualization plot.
 
-    Delegates to plotsmith when available.
+    Uses timesmith.plot_forecast when available.
 
     Args:
         data: DataFrame with actual and forecasted values
@@ -213,51 +167,41 @@ def plot_forecast(
     Returns:
         Dictionary with plot metadata and saved path if applicable
     """
-    # Try to use plotsmith if available
-    if HAS_PLOTSMITH and plotsmith is not None:
+    # Try timesmith first
+    if HAS_TIMESMITH and timesmith is not None:
         try:
-            # Delegate to plotsmith
-            if hasattr(plotsmith, "plot_forecast"):
-                fig = plotsmith.plot_forecast(
-                    data, timestamp_column, actual_column, forecast_column, title=title, **kwargs
-                )
-            elif hasattr(plotsmith, "plot") and hasattr(plotsmith.plot, "forecast"):
-                fig = plotsmith.plot.forecast(
-                    data, timestamp_column, actual_column, forecast_column, title=title, **kwargs
-                )
-            else:
-                raise AttributeError("plotsmith does not have expected plot_forecast function")
-            
-            # Save if output_path provided
+            plot_data = data.set_index(timestamp_column)
+            historical = plot_data[actual_column].dropna()
+            forecast = plot_data[forecast_column].dropna()
+
+            fig, ax = timesmith.plot_forecast(
+                historical,
+                forecast,
+                title=title or "Forecast",
+                **kwargs,
+            )
+
+            output_path_str = None
             if output_path:
-                output_path = Path(output_path)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                if hasattr(fig, "savefig"):
-                    fig.savefig(output_path)
-                elif hasattr(fig, "save"):
-                    fig.save(output_path)
-                else:
-                    # Fallback: try matplotlib-style save
-                    import matplotlib.pyplot as plt
-                    if hasattr(plt, "savefig"):
-                        plt.savefig(output_path)
-                        plt.close()
-            
+                output_path_obj = Path(output_path)
+                output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(output_path_obj)
+                output_path_str = str(output_path)
+
             return {
                 "type": "forecast",
                 "timestamp_column": timestamp_column,
                 "actual_column": actual_column,
                 "forecast_column": forecast_column,
                 "title": title,
-                "output_path": str(output_path) if output_path else None,
+                "output_path": output_path_str,
                 "data_shape": data.shape,
             }
         except Exception:
-            # Fall back to placeholder if plotsmith fails
             pass
 
     # Fallback: return metadata only
-    result: Dict[str, Any] = {
+    result = {
         "type": "forecast",
         "timestamp_column": timestamp_column,
         "actual_column": actual_column,
@@ -267,9 +211,8 @@ def plot_forecast(
     }
 
     if output_path:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path_obj = Path(output_path)
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
         result["output_path"] = str(output_path)
 
     return result
-

@@ -42,7 +42,7 @@ def load_config(config_path: str) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(path, "r") as f:
+    with open(path) as f:
         if path.suffix in [".yaml", ".yml"]:
             return yaml.safe_load(f)
         elif path.suffix == ".json":
@@ -54,7 +54,9 @@ def load_config(config_path: str) -> dict:
 @app.command()
 def run(
     pipeline: str = typer.Argument(..., help="Pipeline name"),
-    config: Optional[str] = typer.Option(None, "--config", "-c", help="Path to config YAML file"),
+    config: Optional[str] = typer.Option(
+        None, "--config", "-c", help="Path to config YAML file"
+    ),
 ):
     """Run a GridSmith pipeline."""
     if config is None:
@@ -69,7 +71,7 @@ def run(
         if pipeline == "ami-anomaly":
             config_obj = AMIAnomalyConfig(**config_dict)
             results = client.ami_anomaly(config_obj)
-            typer.echo(f"✓ AMI anomaly detection completed")
+            typer.echo("✓ AMI anomaly detection completed")
             typer.echo(f"  Output directory: {results.output_dir}")
             typer.echo(f"  Metrics: {list(results.metrics.keys())}")
             typer.echo(f"  Tables: {list(results.tables.keys())}")
@@ -78,47 +80,47 @@ def run(
         elif pipeline == "temperature-load":
             config_obj = TemperatureLoadConfig(**config_dict)
             results = client.temperature_load(config_obj)
-            typer.echo(f"✓ Temperature-to-load modeling completed")
+            typer.echo("✓ Temperature-to-load modeling completed")
             typer.echo(f"  Output directory: {results.output_dir}")
             typer.echo(f"  Metrics: {list(results.metrics.keys())}")
 
         elif pipeline == "load-forecasting":
             config_obj = LoadForecastingConfig(**config_dict)
             results = client.load_forecasting(config_obj)
-            typer.echo(f"✓ Load forecasting completed")
+            typer.echo("✓ Load forecasting completed")
             typer.echo(f"  Output directory: {results.output_dir}")
             typer.echo(f"  Metrics: {list(results.metrics.keys())}")
 
         elif pipeline == "predictive-maintenance":
             config_obj = PredictiveMaintenanceConfig(**config_dict)
             results = client.predictive_maintenance(config_obj)
-            typer.echo(f"✓ Predictive maintenance completed")
+            typer.echo("✓ Predictive maintenance completed")
             typer.echo(f"  Output directory: {results.output_dir}")
             typer.echo(f"  Metrics: {list(results.metrics.keys())}")
 
         elif pipeline == "outage-prediction":
             config_obj = OutagePredictionConfig(**config_dict)
             results = client.outage_prediction(config_obj)
-            typer.echo(f"✓ Outage prediction completed")
+            typer.echo("✓ Outage prediction completed")
             typer.echo(f"  Output directory: {results.output_dir}")
             typer.echo(f"  Metrics: {list(results.metrics.keys())}")
 
         elif pipeline == "outage-detect":
             config_obj = OutageDetectionConfig(**config_dict)
             results = client.outage_detection(config_obj)
-            typer.echo(f"✓ Outage detection completed")
+            typer.echo("✓ Outage detection completed")
             typer.echo(f"  Output directory: {results.output_dir}")
 
         elif pipeline == "asset-degradation":
             config_obj = AssetDegradationConfig(**config_dict)
             results = client.asset_degradation(config_obj)
-            typer.echo(f"✓ Asset degradation analysis completed")
+            typer.echo("✓ Asset degradation analysis completed")
             typer.echo(f"  Output directory: {results.output_dir}")
 
         elif pipeline == "load-shape":
             config_obj = LoadShapeConfig(**config_dict)
             results = client.load_shape(config_obj)
-            typer.echo(f"✓ Load shape analysis completed")
+            typer.echo("✓ Load shape analysis completed")
             typer.echo(f"  Output directory: {results.output_dir}")
 
         else:
@@ -172,7 +174,9 @@ def validate(
 @app.command()
 def info():
     """Display information about GridSmith."""
-    typer.echo("GridSmith: Orchestration and reference app layer for ML4U chapter examples")
+    typer.echo(
+        "GridSmith: Orchestration and reference app layer for ML4U chapter examples"
+    )
     typer.echo("")
     typer.echo("Available pipelines:")
     typer.echo("  - ami-anomaly: AMI anomaly detection")
@@ -192,4 +196,3 @@ def info():
 
 if __name__ == "__main__":
     app()
-

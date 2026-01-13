@@ -5,4 +5,3 @@ __version__ = "0.1.0"
 from gridsmith.api.client import GridSmithClient
 
 __all__ = ["GridSmithClient"]
-

@@ -5,18 +5,18 @@ This module provides structured result objects for API responses.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 @dataclass
 class AMIAnomalyResults:
     """Results from AMI anomaly detection."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def metrics_path(self) -> Path:
@@ -40,75 +40,74 @@ class AMIAnomalyResults:
 class OutageDetectionResults:
     """Results from outage detection."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AssetDegradationResults:
     """Results from asset degradation analysis."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class LoadShapeResults:
     """Results from load shape analysis."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class TemperatureLoadResults:
     """Results from temperature-to-load modeling."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class LoadForecastingResults:
     """Results from load forecasting."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class PredictiveMaintenanceResults:
     """Results from predictive maintenance."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class OutagePredictionResults:
     """Results from outage prediction."""
 
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     output_dir: str
-    tables: Dict[str, str] = field(default_factory=dict)
-    figures: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
+    tables: dict[str, str] = field(default_factory=dict)
+    figures: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)

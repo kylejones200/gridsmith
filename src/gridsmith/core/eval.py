@@ -4,13 +4,14 @@ This module provides glue code for evaluation metrics.
 Keep only glue code here; delegate actual metric computation to Smith libs.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 
 # Try to import Smith libraries with graceful fallback
 try:
     import timesmith
+
     HAS_TIMESMITH = True
 except ImportError:
     HAS_TIMESMITH = False
@@ -18,6 +19,7 @@ except ImportError:
 
 try:
     import anomsmith
+
     HAS_ANOMSMITH = True
 except ImportError:
     HAS_ANOMSMITH = False
@@ -27,8 +29,8 @@ except ImportError:
 def compute_regression_metrics(
     actual: pd.Series,
     predicted: pd.Series,
-    metrics: Optional[List[str]] = None,
-) -> Dict[str, float]:
+    metrics: Optional[list[str]] = None,
+) -> dict[str, float]:
     """Compute regression metrics.
 
     Delegates to timesmith when available, otherwise computes locally.
@@ -41,36 +43,47 @@ def compute_regression_metrics(
     Returns:
         Dictionary of metric names to values
     """
-    if metrics is None:
-        metrics = ["mse", "mae", "rmse", "mape"]
-
-    # Try to use timesmith if available
-    if HAS_TIMESMITH and timesmith is not None:
-        try:
-            # Delegate to timesmith for regression metrics
-            # Assuming timesmith has a compute_metrics function
-            if hasattr(timesmith, "compute_regression_metrics"):
-                return timesmith.compute_regression_metrics(actual, predicted, metrics)
-            elif hasattr(timesmith, "metrics") and hasattr(timesmith.metrics, "regression"):
-                return timesmith.metrics.regression(actual, predicted, metrics)
-        except Exception:
-            # Fall back to local computation if timesmith fails
-            pass
-
-    # Fallback: compute locally
-    results: Dict[str, float] = {}
+    metrics = metrics or ["mse", "mae", "rmse", "mape"]
     errors = actual - predicted
+    errors_squared = errors**2
 
-    if "mse" in metrics:
-        results["mse"] = float((errors ** 2).mean())
-    if "mae" in metrics:
-        results["mae"] = float(errors.abs().mean())
-    if "rmse" in metrics:
-        results["rmse"] = float((errors ** 2).mean() ** 0.5)
-    if "mape" in metrics:
-        mask = actual != 0
-        if mask.any():
-            results["mape"] = float((errors[mask] / actual[mask]).abs().mean() * 100)
+    # Metric computation functions (vectorized)
+    metric_computers = {
+        "mse": lambda: float(errors_squared.mean()),
+        "mae": lambda: float(errors.abs().mean()),
+        "rmse": lambda: float(errors_squared.mean() ** 0.5),
+        "mape": lambda: float(
+            (errors[actual != 0] / actual[actual != 0]).abs().mean() * 100
+        )
+        if (actual != 0).any()
+        else 0.0,
+    }
+
+    # Try timesmith first for supported metrics
+    timesmith_metrics = {"mae", "rmse", "mape"}
+    results = {}
+    timesmith_available = HAS_TIMESMITH and timesmith is not None
+
+    # Map timesmith functions
+    timesmith_funcs = {
+        "mae": getattr(timesmith, "mae", None),
+        "rmse": getattr(timesmith, "rmse", None),
+        "mape": getattr(timesmith, "mape", None),
+    }
+
+    # Compute metrics using timesmith where available
+    for metric in metrics:
+        if metric in timesmith_metrics and timesmith_available:
+            func = timesmith_funcs.get(metric)
+            if func:
+                try:
+                    results[metric] = float(func(actual, predicted))
+                    continue
+                except Exception:
+                    pass
+        # Fallback to local computation
+        if metric in metric_computers:
+            results[metric] = metric_computers[metric]()
 
     return results
 
@@ -79,8 +92,8 @@ def compute_anomaly_metrics(
     actual_labels: pd.Series,
     predicted_labels: pd.Series,
     scores: Optional[pd.Series] = None,
-    metrics: Optional[List[str]] = None,
-) -> Dict[str, float]:
+    metrics: Optional[list[str]] = None,
+) -> dict[str, float]:
     """Compute anomaly detection metrics.
 
     Delegates to anomsmith when available, otherwise computes locally.
@@ -94,25 +107,23 @@ def compute_anomaly_metrics(
     Returns:
         Dictionary of metric names to values
     """
-    if metrics is None:
-        metrics = ["precision", "recall", "f1"]
+    metrics = metrics or ["precision", "recall", "f1"]
 
-    # Try to use anomsmith if available
+    # Try anomsmith first
     if HAS_ANOMSMITH and anomsmith is not None:
-        try:
-            # Delegate to anomsmith for anomaly metrics
-            if hasattr(anomsmith, "compute_metrics"):
-                return anomsmith.compute_metrics(actual_labels, predicted_labels, scores, metrics)
-            elif hasattr(anomsmith, "metrics") and hasattr(anomsmith.metrics, "anomaly"):
-                return anomsmith.metrics.anomaly(actual_labels, predicted_labels, scores, metrics)
-            elif hasattr(anomsmith, "evaluate"):
-                return anomsmith.evaluate(actual_labels, predicted_labels, scores, metrics)
-        except Exception:
-            # Fall back to local computation if anomsmith fails
-            pass
+        anomsmith_methods = [
+            getattr(anomsmith, "compute_metrics", None),
+            getattr(getattr(anomsmith, "metrics", None), "anomaly", None),
+            getattr(anomsmith, "evaluate", None),
+        ]
+        for method in anomsmith_methods:
+            if method:
+                try:
+                    return method(actual_labels, predicted_labels, scores, metrics)
+                except Exception:
+                    continue
 
     # Fallback: compute locally using sklearn
-    results: Dict[str, float] = {}
     from sklearn.metrics import (
         accuracy_score,
         f1_score,
@@ -120,51 +131,41 @@ def compute_anomaly_metrics(
         recall_score,
     )
 
-    if "accuracy" in metrics:
-        results["accuracy"] = float(accuracy_score(actual_labels, predicted_labels))
-    if "precision" in metrics:
-        results["precision"] = float(precision_score(actual_labels, predicted_labels, zero_division=0))
-    if "recall" in metrics:
-        results["recall"] = float(recall_score(actual_labels, predicted_labels, zero_division=0))
-    if "f1" in metrics:
-        results["f1"] = float(f1_score(actual_labels, predicted_labels, zero_division=0))
+    metric_funcs = {
+        "accuracy": lambda: float(accuracy_score(actual_labels, predicted_labels)),
+        "precision": lambda: float(
+            precision_score(actual_labels, predicted_labels, zero_division=0)
+        ),
+        "recall": lambda: float(
+            recall_score(actual_labels, predicted_labels, zero_division=0)
+        ),
+        "f1": lambda: float(
+            f1_score(actual_labels, predicted_labels, zero_division=0)
+        ),
+    }
 
-    return results
+    return {
+        metric: metric_funcs[metric]() for metric in metrics if metric in metric_funcs
+    }
 
 
 def compute_forecast_metrics(
     actual: pd.Series,
     forecast: pd.Series,
     horizons: Optional[pd.Series] = None,
-    metrics: Optional[List[str]] = None,
-) -> Dict[str, float]:
+    metrics: Optional[list[str]] = None,
+) -> dict[str, float]:
     """Compute forecast evaluation metrics.
 
-    Delegates to timesmith for forecast-specific metrics.
+    Uses regression metrics (forecast metrics are the same as regression metrics).
 
     Args:
         actual: Actual values
         forecast: Forecasted values
-        horizons: Optional forecast horizons
+        horizons: Optional forecast horizons (not used, kept for API compatibility)
         metrics: List of metric names to compute
 
     Returns:
         Dictionary of metric names to values
     """
-    # Try to use timesmith if available
-    if HAS_TIMESMITH and timesmith is not None:
-        try:
-            # Delegate to timesmith for forecast metrics
-            if hasattr(timesmith, "compute_forecast_metrics"):
-                return timesmith.compute_forecast_metrics(actual, forecast, horizons, metrics)
-            elif hasattr(timesmith, "metrics") and hasattr(timesmith.metrics, "forecast"):
-                return timesmith.metrics.forecast(actual, forecast, horizons, metrics)
-            elif hasattr(timesmith, "evaluate_forecast"):
-                return timesmith.evaluate_forecast(actual, forecast, horizons, metrics)
-        except Exception:
-            # Fall back to regression metrics if timesmith fails
-            pass
-
-    # Fallback: use regression metrics
     return compute_regression_metrics(actual, forecast, metrics)
-
